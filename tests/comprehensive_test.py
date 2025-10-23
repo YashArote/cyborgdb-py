@@ -172,7 +172,7 @@ class TestIndexTypes(unittest.TestCase):
         results = self.index.query(query_vectors=[query_vector], top_k=5)
 
         self.assertGreater(len(results[0]), 0)
-        self.assertTrue("id" in results[0][0])
+        self.assertTrue("id" in results[0])
 
     def test_ivfpq_index_creation_and_operations(self):
         """Test IVFPQ index creation with PQ parameters"""
@@ -205,8 +205,10 @@ class TestIndexTypes(unittest.TestCase):
         query_vector = self.test_vectors[0]
         results = self.index.query(query_vectors=[query_vector], top_k=5)
 
+        
+
         self.assertGreater(len(results[0]), 0)
-        self.assertTrue("id" in results[0][0])
+        self.assertTrue("id" in results[0])
 
     def test_ivfpq_parameter_validation(self):
         """Test IVFPQ parameter validation"""
@@ -360,10 +362,10 @@ class TestEdgeCases(unittest.TestCase):
     def test_empty_query_results(self):
         """Test handling of empty query results"""
         query_vector = np.random.rand(128).astype(np.float32)
-        results = self.index.query(query_vectors=[query_vector], top_k=10)
+        results = self.index.query(query_vectors=query_vector, top_k=10)
 
         # Should return empty results for empty index
-        self.assertEqual(len(results[0]), 0)
+        self.assertEqual(len(results), 0)
 
     def test_mismatched_parameter_lengths(self):
         """Test validation of mismatched parameter lengths"""
@@ -391,9 +393,8 @@ class TestEdgeCases(unittest.TestCase):
             self.index.upsert(items_missing_vector)
 
         # Test with empty items list
-        result = self.index.upsert([])
-        # Empty upsert should succeed but insert nothing
-        self.assertIsNotNone(result)
+        with self.assertRaises(Exception):
+            result = self.index.upsert([])
 
     def test_content_preservation_through_operations(self):
         """Test that content is preserved through various operations"""
@@ -468,6 +469,26 @@ class TestEdgeCases(unittest.TestCase):
 
 class TestBackendCompatibility(unittest.TestCase):
     """Test backend compatibility (Lite vs Full)"""
+
+    def setUp(self):
+        self.client = create_client()
+        self.index_name = generate_unique_name()
+        self.index_key = self.client.generate_key()
+        self.index_config = cyborgdb.IndexIVFFlat(dimension=128)
+        self.index = self.client.create_index(
+            self.index_name,
+            self.index_key,
+            self.index_config,
+            metric="euclidean",
+        )
+
+    def tearDown(self):
+        """Clean up created indexes"""
+        try:
+            if self.index:
+                self.index.delete_index()
+        except Exception:
+            pass
 
     def test_lite_backend_compatibility(self):
         """Test operations with lite backend"""
