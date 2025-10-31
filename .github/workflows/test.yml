@@ -3,6 +3,7 @@ permissions:
   contents: read
 
 on:
+  workflow_dispatch:
   pull_request:
     types: [opened, synchronize]
   push:
@@ -68,30 +69,43 @@ jobs:
           fetch-depth: 0  # Get full history for version detection
           fetch-tags: true  # Fetch all tags
           
+      - name: Install service dependencies
+        run: |
+          # Install CPU-only torch
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          # Install optional test dependencies
+          pip install sentence-transformers
+          
       - name: Install cyborgdb-service from source
         run: |
           # Install the server from the cloned repository
           pip install ./cyborgdb-service
           
-      - name: Install SDK dependencies
+      - name: Install SDK and test dependencies
         run: |
-          pip install -e .
+          pip install '.[langchain]'
           pip install pytest pytest-cov pytest-asyncio
-          # Install CPU-only torch
-          pip install torch --index-url https://download.pytorch.org/whl/cpu
-          # Install optional test dependencies
-          pip install langchain langchain-community langchain-core sentence-transformers requests
 
-      - name: Test with Standard version
+      - name: Load Demo API Key
         run: |
-          echo "=== Testing with Standard version ==="
+          echo "=== Loading Demo API Key ==="
+          CYBORGDB_API_KEY=$(python -c "from cyborgdb import get_demo_api_key; print(get_demo_api_key())")
+          if [ -z "$CYBORGDB_API_KEY" ]; then
+            echo "Failed to generate demo API key"
+            exit 1
+          fi
+          echo "CYBORGDB_API_KEY=${CYBORGDB_API_KEY}" >> $GITHUB_ENV
+          echo "Demo API key loaded successfully"
+
+      - name: Test
+        run: |
+          echo "=== Running Tests with local CyborgDB Service ==="
           # Set up environment for Standard
-          export CYBORGDB_API_KEY="${{ secrets.CYBORGDB_STANDARD_API_KEY }}"
           export CYBORGDB_DB_TYPE=postgres
           export CYBORGDB_CONNECTION_STRING="host=localhost port=5432 dbname=cyborgdb user=postgres password=postgres"
           export CYBORGDB_SERVICE_LOG_LEVEL=DEBUG
           
-          # Start the service with Standard API key
+          # Start the service
           nohup cyborgdb-service > server-standard.log 2>&1 &
           echo $! > server-standard.pid
           
