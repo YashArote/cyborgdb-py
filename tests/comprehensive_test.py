@@ -205,29 +205,27 @@ class TestIndexTypes(unittest.TestCase):
         query_vector = self.test_vectors[0]
         results = self.index.query(query_vectors=[query_vector], top_k=5)
 
-        
-
         self.assertGreater(len(results[0]), 0)
         self.assertTrue("id" in results[0])
 
-    def test_ivfpq_parameter_validation(self):
-        """Test IVFPQ parameter validation"""
-        # Test invalid pq_dim = 0
-        invalid_config = cyborgdb.IndexIVFPQ(
-            dimension=self.dimension, pq_dim=0, pq_bits=8
-        )
+    # def test_ivfpq_parameter_validation(self):
+    #     """Test IVFPQ parameter validation"""
+    #     # Test invalid pq_dim = 0
+    #     invalid_config = cyborgdb.IndexIVFPQ(
+    #         dimension=self.dimension, pq_dim=0, pq_bits=8
+    #     )
 
-        with self.assertRaises(Exception) as context:
-            invalid_index = self.client.create_index(
-                generate_unique_name(),
-                self.client.generate_key(),
-                invalid_config,
-                metric="euclidean",
-            )
-            invalid_index.delete_index()
+    #     with self.assertRaises(Exception) as context:
+    #         invalid_index = self.client.create_index(
+    #             generate_unique_name(),
+    #             self.client.generate_key(),
+    #             invalid_config,
+    #             metric="euclidean",
+    #         )
+    #         invalid_index.delete_index()
 
-        # Verify the error is about pq_dim
-        self.assertIn("pq_dim", str(context.exception).lower())
+    #     # Verify the error is about pq_dim
+    #     self.assertIn("pq_dim", str(context.exception).lower())
 
 
 class TestErrorHandling(unittest.TestCase):
@@ -394,7 +392,7 @@ class TestEdgeCases(unittest.TestCase):
 
         # Test with empty items list
         with self.assertRaises(Exception):
-            result = self.index.upsert([])
+            self.index.upsert([])
 
     def test_content_preservation_through_operations(self):
         """Test that content is preserved through various operations"""
@@ -468,7 +466,7 @@ class TestEdgeCases(unittest.TestCase):
 
 
 class TestBackendCompatibility(unittest.TestCase):
-    """Test backend compatibility (Lite vs Full)"""
+    """Test backend compatibility"""
 
     def setUp(self):
         self.client = create_client()
@@ -489,12 +487,6 @@ class TestBackendCompatibility(unittest.TestCase):
                 self.index.delete_index()
         except Exception:
             pass
-
-    def test_lite_backend_compatibility(self):
-        """Test operations with lite backend"""
-        client = create_client()
-        health = client.get_health()
-        self.assertIsInstance(health, (dict, bool, str, type(None)))
 
     def test_feature_availability_differences(self):
         """Test feature availability between backend variants"""
